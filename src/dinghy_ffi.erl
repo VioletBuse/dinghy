@@ -1,11 +1,12 @@
 -module(dinghy_ffi).
 
--export([start/0, start_cluster/4, start_or_restart_cluster/5, start_server/4,
-    process_command/3, members/2, add_member/3, query_leader/3, query_replica/3,
+-export([start/0, identity/1, start_cluster/4, start_or_restart_cluster/5, start_server/4,
+    process_command/3, members/2, members_local/2, add_member/3, query_leader/3, query_replica/3,
     leave_and_terminate/3, trigger_election/2, delete_cluster/2]).
 
-start() ->
-    ra:start().
+start() -> ra:start().
+
+identity(Val) -> Val.
 
 start_cluster(ClusterName, Function, InitialState, ServerIds) ->
     case ra:start_cluster(default, ClusterName, {simple, Function, InitialState}, ServerIds) of
@@ -34,6 +35,13 @@ process_command(ServerId, Command, Options) ->
 
 members(Servers, Timeout) ->
     case ra:members(Servers, Timeout) of
+        {ok, Members, LeaderId} -> {ok, {Members, LeaderId}};
+        {timeout, _ServerId} -> {error, timeout};
+        {error, Error} -> {error, {other, Error}}
+    end.
+
+members_local(Server, Timeout) ->
+    case ra:members({local, Server}, Timeout) of
         {ok, Members, LeaderId} -> {ok, {Members, LeaderId}};
         {timeout, _ServerId} -> {error, timeout};
         {error, Error} -> {error, {other, Error}}
