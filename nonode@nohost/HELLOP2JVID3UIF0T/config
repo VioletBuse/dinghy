@@ -1,0 +1,7 @@
+#{id => {hello,nonode@nohost},
+  machine => {simple,fun erlang:'+'/2,0},
+  cluster_name => hello,uid => <<"HELLOP2JVID3UIF0T">>,
+  initial_members => [{hello,nonode@nohost}],
+  log_init_args => #{uid => <<"HELLOP2JVID3UIF0T">>},
+  broadcast_time => 100,tick_timeout => 1000,
+  install_snap_rpc_timeout => 120000,await_condition_timeout => 30000}.

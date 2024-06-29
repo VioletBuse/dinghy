@@ -1,8 +1,9 @@
 -module(dinghy_ffi).
 
 -export([start/0, identity/1, start_cluster/4, start_or_restart_cluster/5, start_server/4,
-    process_command/3, members/2, members_local/2, add_member/3, query_leader/3, query_replica/3,
-    leave_and_terminate/3, trigger_election/2, delete_cluster/2]).
+    process_command/3, members_from_name/2, members/2, members_local/2, add_member/3,
+    server_id_node/1, query_leader/3, query_replica/3, leave_and_terminate/3,
+    trigger_election/2, delete_cluster/2]).
 
 start() -> ra:start().
 
@@ -33,6 +34,9 @@ process_command(ServerId, Command, Options) ->
         {error, Error} -> {error, {other, Error}}
     end.
 
+members_from_name(ClusterName, Timeout) ->
+    members(ClusterName, Timeout).
+
 members(Servers, Timeout) ->
     case ra:members(Servers, Timeout) of
         {ok, Members, LeaderId} -> {ok, {Members, LeaderId}};
@@ -41,11 +45,7 @@ members(Servers, Timeout) ->
     end.
 
 members_local(Server, Timeout) ->
-    case ra:members({local, Server}, Timeout) of
-        {ok, Members, LeaderId} -> {ok, {Members, LeaderId}};
-        {timeout, _ServerId} -> {error, timeout};
-        {error, Error} -> {error, {other, Error}}
-    end.
+    members({local, Server}, Timeout).
 
 add_member(Existing, New, Timeout) ->
     case ra:add_member(Existing, New, Timeout) of
@@ -53,6 +53,10 @@ add_member(Existing, New, Timeout) ->
         {error, already_member} -> {error, already_member};
         {error, cluster_change_not_permitted} -> {error, not_allowed}
     end.
+
+server_id_node(ServerId) ->
+    {_, Result} = ServerId,
+    ServerId.
 
 query_leader(Server, Fun, Timeout) ->
     case ra:leader_query(Server, Fun, Timeout) of

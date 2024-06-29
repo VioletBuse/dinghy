@@ -1,54 +1,83 @@
-import delay
 import dinghy/internal/ffi.{type ClusterName, type ServerId}
+import gleam/erlang/atom.{type Atom}
 import gleam/erlang/node.{type Node}
 import gleam/list
 import gleam/result
 
-pub type ClusterDefinition(name, message, state) {
-  ClusterDefinition(
-    name: name,
-    handler: fn(message, state) -> state,
-    initial_state: state,
-    nodes: List(Node),
-  )
+fn local_replica(servers: List(ServerId)) -> Result(ServerId, Nil) {
+  list.find(servers, fn(server) {
+    let node = ffi.server_id_node(server)
+    node == node.self()
+  })
+  |> result.try_recover(fn(_) {
+    case servers {
+      [] -> Error(Nil)
+      [first, ..] -> Ok(first)
+    }
+  })
 }
 
-pub opaque type Cluster(message, state) {
-  Cluster(name: ClusterName, members: List(Member(message, state)))
+pub type Cluster(message, state) {
+  Cluster(name: ClusterName)
 }
 
-pub opaque type Member(message, state) {
-  Member(server_id: ServerId)
-}
-
-pub fn define_cluster(
-  name: name,
-  initial_state: state,
-  handler: fn(message, state) -> state,
+pub fn start_cluster(
+  name: Atom,
+  state: a,
+  handle_message: fn(b, a) -> a,
   nodes: List(Node),
 ) {
-  ClusterDefinition(name, handler, initial_state, nodes)
+  let cluster_name = ffi.cluster_name(name)
+  let nodes = list.map(nodes, ffi.server_id(cluster_name, _))
+  let cluster_start_result =
+    ffi.start_cluster(cluster_name, handle_message, state, nodes)
+
+  use _ <- result.try(cluster_start_result)
+
+  let cluster: Cluster(b, a) = Cluster(cluster_name)
+
+  Ok(cluster)
 }
 
-pub fn start(
-  definition: ClusterDefinition(name, message, state),
-) -> Result(Cluster(message, state), Nil) {
-  let name = ffi.cluster_name(definition.name)
-  let server_ids = list.map(definition.nodes, ffi.server_id(name, _))
+pub fn send(
+  cluster: Cluster(msg, s),
+  message: msg,
+  timeout: Int,
+) -> Result(s, ffi.Error) {
+  use #(_, leader) <- result.try(ffi.members_from_name(cluster.name, timeout))
+  use #(state, _) <- result.try(ffi.process_command(leader, message, timeout))
+  Ok(state)
+}
 
-  case
-    ffi.start_cluster_ffi(
-      name,
-      definition.handler,
-      definition.initial_state,
-      server_ids,
-    )
-  {
-    Ok(ffi.ClusterStartResult(started, failed)) -> {
-      let members = list.map(started, Member)
+pub fn query_replica(
+  cluster: Cluster(msg, s),
+  function: fn(s) -> a,
+  timeout: Int,
+) -> Result(a, ffi.Error) {
+  use #(replicas, _) <- result.try(ffi.members_from_name(cluster.name, timeout))
+  use replica <- result.try(
+    local_replica(replicas) |> result.map_error(fn(_) { ffi.Timeout }),
+  )
+  use ffi.QueryResult(res, _leader) <- result.try(ffi.query_replica(
+    replica,
+    function,
+    timeout,
+  ))
 
-      Ok(Cluster(name, members))
-    }
-    _ -> Error(Nil)
-  }
+  Ok(res)
+}
+
+pub fn query_leader(
+  cluster: Cluster(msg, s),
+  function: fn(s) -> a,
+  timeout: Int,
+) -> Result(a, ffi.Error) {
+  use #(_, leader) <- result.try(ffi.members_from_name(cluster.name, timeout))
+  use ffi.QueryResult(res, _leader) <- result.try(ffi.query_leader(
+    leader,
+    function,
+    timeout,
+  ))
+
+  Ok(res)
 }

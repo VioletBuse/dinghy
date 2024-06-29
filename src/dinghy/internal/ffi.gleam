@@ -14,7 +14,7 @@ pub fn server_id(cluster: ClusterName, node: Node) -> ServerId {
 }
 
 @external(erlang, "dinghy_ffi", "identity")
-pub fn cluster_name(name: a) -> ClusterName
+pub fn cluster_name(name: Atom) -> ClusterName
 
 @external(erlang, "dinghy_ffi", "start")
 pub fn start() -> Nil
@@ -24,7 +24,7 @@ pub type ClusterStartResult {
 }
 
 @external(erlang, "dinghy_ffi", "start_cluster")
-pub fn start_cluster_ffi(
+pub fn start_cluster(
   name: ClusterName,
   function: fn(a, b) -> b,
   initial_state: b,
@@ -32,7 +32,7 @@ pub fn start_cluster_ffi(
 ) -> Result(ClusterStartResult, Nil)
 
 @external(erlang, "dinghy_ffi", "start_or_restart_cluster")
-pub fn start_or_restart_cluster_ffi(
+pub fn start_or_restart_cluster(
   name: ClusterName,
   function: fn(a, b) -> b,
   initial_state: b,
@@ -59,6 +59,12 @@ pub fn process_command(
   timeout: Int,
 ) -> Result(#(b, ServerId), Error)
 
+@external(erlang, "dinghy_ffi", "members_from_name")
+pub fn members_from_name(
+  name: ClusterName,
+  timeout: Int,
+) -> Result(#(List(ServerId), ServerId), Error)
+
 @external(erlang, "dinghy_ffi", "members")
 pub fn members(
   servers: List(ServerId),
@@ -77,6 +83,9 @@ pub fn add_member(
   new_member: ServerId,
   timeout: Int,
 ) -> Result(Nil, Error)
+
+@external(erlang, "dinghy_ffi", "server_id_node")
+pub fn server_id_node(server_id: ServerId) -> Node
 
 pub type QueryResult(a) {
   QueryResult(result: a, leader: ServerId)

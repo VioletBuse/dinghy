@@ -1,0 +1,8 @@
+#{id => {test,'d2@127.0.0.1'},
+  machine => {simple,fun erlang:'+'/2,0},
+  cluster_name => test,uid => <<"TEST3EADG3DIZCCF">>,
+  initial_members =>
+      [{test,'d1@127.0.0.1'},{test,'d2@127.0.0.1'},{test,'d3@127.0.0.1'}],
+  log_init_args => #{uid => <<"TEST3EADG3DIZCCF">>},
+  broadcast_time => 100,tick_timeout => 1000,
+  install_snap_rpc_timeout => 120000,await_condition_timeout => 30000}.
