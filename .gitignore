@@ -2,3 +2,4 @@
 *.ez
 /build
 erl_crash.dump
+*@127.0.0.1

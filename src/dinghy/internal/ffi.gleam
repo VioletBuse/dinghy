@@ -49,6 +49,7 @@ pub fn start_server(
 
 pub type Error {
   Timeout
+  Noproc
   Other(Dynamic)
 }
 
@@ -73,7 +74,7 @@ pub fn members(
 
 @external(erlang, "dinghy_ffi", "members_local")
 pub fn members_local(
-  server: ServerId,
+  server: List(ServerId),
   timeout: Int,
 ) -> Result(#(List(ServerId), ServerId), Error)
 
@@ -93,21 +94,21 @@ pub type QueryResult(a) {
 
 @external(erlang, "dinghy_ffi", "query_leader")
 pub fn query_leader(
-  server: ServerId,
+  server: List(ServerId),
   fun: fn(a) -> b,
   timeout: Int,
 ) -> Result(QueryResult(b), Error)
 
 @external(erlang, "dinghy_ffi", "query_replica")
 pub fn query_replica(
-  server: ServerId,
+  server: List(ServerId),
   fun: fn(a) -> b,
   timeout: Int,
 ) -> Result(QueryResult(b), Error)
 
 @external(erlang, "dinghy_ffi", "leave_and_terminate")
 pub fn leave_and_terminate(
-  server: ServerId,
+  server: List(ServerId),
   to_remove: ServerId,
   timeout: Int,
 ) -> Result(Nil, Error)
@@ -115,8 +116,19 @@ pub fn leave_and_terminate(
 @external(erlang, "dinghy_ffi", "trigger_election")
 pub fn trigger_election(server: ServerId, timeout: Int) -> Nil
 
+@external(erlang, "dinghy_ffi", "transfer_leadership")
+pub fn transfer_leadership(from: ServerId, to: ServerId) -> Result(Nil, Error)
+
 @external(erlang, "dinghy_ffi", "delete_cluster")
 pub fn delete_cluster(
   server: ServerId,
   timeout: Int,
 ) -> Result(ServerId, Dynamic)
+
+pub type StopServerResult {
+  Nodedown
+  SystemNotStarted
+}
+
+@external(erlang, "dinghy_ffi", "stop_server")
+pub fn stop_server(server: ServerId) -> Result(Nil, StopServerResult)
